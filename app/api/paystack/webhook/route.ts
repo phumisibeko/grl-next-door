@@ -1,0 +1,5 @@
+import {NextRequest,NextResponse} from 'next/server';import {createHmac,timingSafeEqual} from 'node:crypto';
+export const runtime='nodejs';
+// Paystack webhook signature verification. Connect a persistent order store / notification handler before production fulfilment.
+export async function POST(req:NextRequest){const key=process.env.PAYSTACK_SECRET_KEY;if(!key)return NextResponse.json({error:'Not configured'},{status:503});const raw=await req.text();const signature=req.headers.get('x-paystack-signature')||'';const expected=createHmac('sha512',key).update(raw).digest('hex');const a=Buffer.from(signature,'hex'),b=Buffer.from(expected,'hex');if(a.length!==b.length||!timingSafeEqual(a,b))return NextResponse.json({error:'Invalid signature'},{status:401});const event=JSON.parse(raw);if(event.event==='charge.success'){// TODO: persist verified order by event.data.reference, ensure idempotency, notify store owner and initiate fulfilment.
+console.info('Verified Paystack success webhook',event.data?.reference)}return NextResponse.json({received:true})}
